@@ -4,4 +4,4 @@
 .build_api_key.json
 .imptest
 tests/agent.nut
-tests.device.nut
+tests/device.nut
