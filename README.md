@@ -1,12 +1,15 @@
 # RC1692HP
 
-This library can be used to communicate  between and Electric imp and a Sigfox RC1692HP via UART.
+This library can be used to communicate  between and an Electric imp device and a Sigfox RC1692HP via UART. This includes accessing the self information of the RC1692HP.
 
 To add this library to your model, add the following lines to the top of your agent code:
 
 ```
 #require "RC1692HP.lib.nut"
 ```
+
+
+
 ## Class Methods
 
 ### constructor(uart[, params])
@@ -108,8 +111,8 @@ PAC				| String	| device PAC number
 ```
 sigFox.readID(function(res) {
 
-server.log("The ID is: " + res.ID);
-server.log("The PAC number is: " + res.pAC );
+    server.log("The ID is: " + res.ID);
+    server.log("The PAC number is: " + res.pAC );
 });
 ```
 
@@ -135,7 +138,7 @@ RSSI			| Integer	| Signal Strength
 ```
 sigFox.readRSSI(function(res) {
 
-server.log("The RSSI is: " + res.RSSI);
+    server.log("The RSSI is: " + res.RSSI);
 });
 ```
 
@@ -160,7 +163,7 @@ temperature		| Integer	| Temperature read from RC1692HP Sigfox
 ```
 sigFox.readTemperature(function(res) {
 
-server.log("The temperature is: " + res.temperature);
+    server.log("The temperature is: " + res.temperature);
 });
 ```
 
@@ -185,7 +188,7 @@ battery			| Float		| The battery voltage of the RC1692HP Sigfox
 ```
 sigFox.readBattery(function(res) {
 
-server.log("The battery voltage is: " + res.battery);
+    server.log("The battery voltage is: " + res.battery);
 });
 ```
 
@@ -211,7 +214,7 @@ value			| Integer	| The value of the read parameter.
 const UART_BAUD_RATE = 0x30;
 sigFox.readConfigurationAt(, function(res) {
 
-server.log("The device's currently configured Baud Rate is: " + res.value);
+    server.log("The device's currently configured Baud Rate is: " + res.value);
 });
 ```
 
