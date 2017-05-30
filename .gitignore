@@ -5,3 +5,5 @@
 .imptest
 tests/agent.nut
 tests/device.nut
+*.out.nut
+utilities.nut
