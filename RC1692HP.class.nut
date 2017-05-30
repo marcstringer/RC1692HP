@@ -504,7 +504,8 @@ class RC1692HP {
         else {
             _timeoutTimer = imp.wakeup(_timeout, function() {
                 _result.error <- RC1692HP_ERROR_TIMED_OUT;
-                _invokeResultHandler();
+                throw RC1692HP_ERROR_TIMED_OUT
+                //_invokeResultHandler();
             }.bindenv(this));
         }
 
@@ -563,9 +564,10 @@ class RC1692HP {
         if (_resultHandler) {
             _resultHandler(_result);
         }
+        /*
         else if ("error" in _result) {
              throw _result.error;
-        }
+        }*/
     }
 
 }

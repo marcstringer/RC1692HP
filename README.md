@@ -212,7 +212,7 @@ value			| Integer	| The value of the read parameter.
 
 ```
 const UART_BAUD_RATE = 0x30;
-sigFox.readConfigurationAt(, function(res) {
+sigFox.readConfigurationAt(UART_BAUD_RATE, function(res) {
 
     server.log("The device's currently configured Baud Rate is: " + res.value);
 });
