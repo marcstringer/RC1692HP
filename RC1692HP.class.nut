@@ -27,12 +27,9 @@
 const RC1692HP_TEMPERATURE_OFFSET = 128;
 const RC1692HP_BATTERY_COEFFICIENT = 0.030;
 
-const RC1692HP_BYTE = 'b';
 const RC1692HP_MAX_MESSAGE_LENGTH = 12;
 const RC1692HP_ID_BYTES = 4;
 const RC1692HP_PAC_BYTES = 8;
-const RC1692HP_BYTE_SENT_DATA_PREFIX = "sending data : ";
-const RC1692HP_BYTE_RECEIVED_DATA_PREFIX = "receiving data : ";
 
 // Default parameters
 const RC1692HP_DEFAULT_BAUD_RATE = 19200;
@@ -40,7 +37,9 @@ const RC1692HP_DEFAULT_WORD_SIZE = 8;
 const RC1692HP_DEFAULT_STOP_BIT = 1;
 const RC1692HP_DEFAULT_TIME_OUT = 1.0;
 const RC1692HP_DEFAULT_DELAY = 2.0;
-const RC1692HP_DEFAULT_SHOULD_LOG = 0;
+const RC1692HP_DEFAULT_PARITY = 0; // see https://electricimp.com/docs/api/hardware/uart/configure/
+const RC1692HP_DEFAULT_FLAGS = 4; // see https://electricimp.com/docs/api/hardware/uart/configure/
+const RC1692HP_DEFAULT_SHOULD_LOG = 1;
 
 // Error messages
 const RC1692HP_ERROR_UNSUPPORTED_MODE = "Unsupported mode, currently only supports congfig and normal modes";
@@ -64,7 +63,7 @@ class RC1692HP {
     _delay = null;
     _shouldLog = null;
     _currentMode = null;
-    _timer = null;
+    _timeoutTimer = null;
     _currentCommand = null;
     _result = null;
     _resultHandler = null;
@@ -90,9 +89,9 @@ class RC1692HP {
         // uart configure params
         local baudRate = ("baudRate" in params) ? params.baudRate : RC1692HP_DEFAULT_BAUD_RATE;
         local wordSize = ("wordSize" in params) ? params.wordSize : RC1692HP_DEFAULT_WORD_SIZE;
-        local parity = ("parity" in params) ? params.parity : PARITY_NONE;
+        local parity = ("parity" in params) ? params.parity : RC1692HP_DEFAULT_PARITY;
         local stopBit = ("stopBit" in params) ? params.stopBit : RC1692HP_DEFAULT_STOP_BIT;
-        local flags = ("flags" in params) ? params.flags : NO_CTSRTS;
+        local flags = ("flags" in params) ? params.flags : RC1692HP_DEFAULT_FLAGS;
 
         // configure internal variables
         _timeout = ("timeout" in params) ? params.timeout : RC1692HP_DEFAULT_TIME_OUT;
@@ -156,9 +155,9 @@ class RC1692HP {
         _enqueue(function() {
 
 	        local query = blob();
-            query.writen(address,RC1692HP_BYTE);
-            query.writen(value,RC1692HP_BYTE);
-            query.writen(0xff,RC1692HP_BYTE);
+            query.writen(address,'b');
+            query.writen(value,'b');
+            query.writen(0xff,'b');
             _sendData(query, "CONFIG");
         }.bindenv(this));
     }
@@ -179,12 +178,12 @@ class RC1692HP {
             switch(typeof message) {
 
                 case "blob" :
-                    payload.writen(message.len(), RC1692HP_BYTE);
+                    payload.writen(message.len(), 'b');
                     payload.writeblob(message);
                     break;
 
                 case "string" :
-                    payload.writen(message.len(), RC1692HP_BYTE);
+                    payload.writen(message.len(), 'b');
                     payload.writestring(message);
                     break;
 
@@ -300,7 +299,7 @@ class RC1692HP {
         _inputBuffer.writeblob(_uart.readblob());
         if ((_currentCommand in COMMANDS) && _inputBuffer.len() >= COMMANDS[_currentCommand]) {
             _cancelTimer();
-            _log(_inputBuffer, RC1692HP_BYTE_RECEIVED_DATA_PREFIX);
+            _log(_inputBuffer, "receiving data : ");
             _processInput(_currentCommand);
             _invokeResultHandler();
             _cleanUp();
@@ -317,9 +316,9 @@ class RC1692HP {
 	//--------------------------------------------------------------------------
     function _cancelTimer() {
 
-        if (_timer) {
-            imp.cancelwakeup(_timer);
-            _timer = null;
+        if (_timeoutTimer) {
+            imp.cancelwakeup(_timeoutTimer);
+            _timeoutTimer = null;
         }
     }
 
@@ -346,19 +345,19 @@ class RC1692HP {
                 break;
 
             case "S" :
-                _result.RSSI <- format("%u", _inputBuffer.readn(RC1692HP_BYTE));
+                _result.RSSI <- format("%u", _inputBuffer.readn('b'));
                 break;
 
             case "U" :
-                _result.temperature <- format("%u", _inputBuffer.readn(RC1692HP_BYTE) - RC1692HP_TEMPERATURE_OFFSET);
+                _result.temperature <- format("%u", _inputBuffer.readn('b') - RC1692HP_TEMPERATURE_OFFSET);
                 break;
 
             case "V" :
-                _result.battery <- format("%.2f", _inputBuffer.readn(RC1692HP_BYTE) * RC1692HP_BATTERY_COEFFICIENT);
+                _result.battery <- format("%.2f", _inputBuffer.readn('b') * RC1692HP_BATTERY_COEFFICIENT);
                 break;
 
             case "READCONFIG":
-                _result.value <- format("%u", _inputBuffer.readn(RC1692HP_BYTE));
+                _result.value <- format("%u", _inputBuffer.readn('b'));
                 break;
         }
     }
@@ -428,13 +427,13 @@ class RC1692HP {
 
         _currentCommand = comment ? comment : data;
         _uart.write(data);
-        _log(data, RC1692HP_BYTE_SENT_DATA_PREFIX);
+        _log(data, "sending data : ");
         // check if it expects any response . if not, fire the next action in the queue;
         if (COMMANDS[_currentCommand] == 0) {
             _cleanUp();
             _nextInQueue();
         } else {
-            _timer = imp.wakeup(_timeout, function() {
+            _timeoutTimer = imp.wakeup(_timeout, function() {
                 _result.error <- RC1692HP_ERROR_TIMED_OUT;
                 _invokeResultHandler();
             }.bindenv(this));
