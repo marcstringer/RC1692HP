@@ -28,7 +28,7 @@ baudRate	   | integer | No		| 19200	  | Rate at which information is transmitted
 wordSize	   | integer | No		| 8		  | Word size in bits (7 or 8)
 parity		   | integer | No		| 0		  | Parity bit: 0 means no parity bit, 1 includes an even parity bit and 2 includes an odd parity bit
 stopBit		   | integer | No		| 1		  | Stop bits (1 or 2)
-flags		   | integer | No		| 4		  | See : https://electricimp.com/docs/api/hardware/uart/configure/. Default is to disable flow control
+flags		   | integer | No		| 4		  | See : [here](https://electricimp.com/docs/api/hardware/uart/configure/). Default is to disable flow control
 timeout		   | float   | No		| 1.0	  | Time to wait for a response before timing out
 delay		   | float   | No		| 2.0	  | Time to wait between performing actions in a queue
 shouldLog	   | boolean | No		| false	  | Displays logs of transmitted and received data
@@ -42,7 +42,7 @@ local sigFox = RC1692HP(uart);
 
 
 ### congfigure(address, value)
-configures parameters stored in non-volatile memory. See https://media.digikey.com/pdf/Data%20Sheets/Radiocrafts%20PDFs/RC16yyyy-SIG_UM_Rev1.9_6-10-16.pdf for a list of memory address and parameter values.
+configures parameters stored in non-volatile memory. See [here](https://media.digikey.com/pdf/Data%20Sheets/Radiocrafts%20PDFs/RC16yyyy-SIG_UM_Rev1.9_6-10-16.pdf) for a list of memory address and parameter values.
 
 Parameter      	| Type   	 | Required | Default | Description
 ---------------	| ---------- | -------- | ------- | -----------
