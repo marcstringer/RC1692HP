@@ -26,10 +26,10 @@
 
 class DeviceTestCase extends ImpTestCase {
 
-    _uart = null;
-    _sigFox = null;
+    _uart = null; // configured uart object
+    _sigFox = null; // Instantiated sigfox class
 
-    // Instatiates the sigFox class and configures UART
+    // Instantiates the sigFox class and configures UART
     function setUp() {
         _uart = hardware.uart12;
         _sigFox = RC1692HP(_uart);
