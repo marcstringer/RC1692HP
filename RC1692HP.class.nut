@@ -69,6 +69,61 @@ class RC1692HP {
     _resultHandler = null;
 
     static COMMANDS = {
+
+        "memory": {
+            "cmd": "M",
+            "length": 1,
+        },
+        "readId": {
+            "cmd": "9",
+            "length": 13
+        },
+        "exitToNormal": {
+            "cmd": "X",
+            "length": 0
+        },
+        "configMode": {
+            "cmd": "\0",
+            "length": 1
+        },
+        "signalStrength": {
+            "cmd": "S",
+            "length": 2
+        },
+        "tempMonitor": {
+            "cmd": "U",
+            "length": 2
+        },
+        "batMonitor": {
+            "cmd": "V",
+            "length": 2
+        },
+        "memoryRead": {
+            "cmd": "Y",
+            "length": 1
+        },
+        "sigFoxMode": {
+            "cmd": "F",
+            "length": 1
+        },
+        "readConfig": {
+            "cmd": "READCONFIG",
+            "length": 2
+        },
+        "config": {
+            "cmd": "CONFIG",
+            "length": 1
+        },
+        "message": {
+            "cmd": "MESSAGE",
+            "length": 0
+        },
+        "modeSwitch": {
+            "cmd": "MODESWITCH",
+            "length": 1
+        }
+
+        /*
         "M" : 1,	// Memory configuration menu
         "9" : 13,	// Read id
         "X" : 0,	// Exit to normal operation
@@ -76,12 +131,13 @@ class RC1692HP {
         "S" : 2,	// Signal Strength
         "U" : 2,	// Temperature monitoring
         "V" : 2,	// Battery monitoring
-        "Y" : 1,	// memory monitoring
+        "Y" : 1,	// memory read
         "F" : 1,	// SIGFOX mode
         "READCONFIG" : 2,
         "CONFIG" : 1,
         "MESSAGE" : 0,
         "MODESWITCH" : 1
+        */
     };
 
     constructor(uart, params = {}){
@@ -122,12 +178,14 @@ class RC1692HP {
 
             switch(mode) {
                 case RC1692HP_MODE.CONFIG:
-                    _sendData("\0");
+                    _sendData(COMMANDS.configMode);
+                    //_sendData("\0");
                     break;
 
                 case RC1692HP_MODE.NORMAL:
                     _currentMode = mode;
-                    _sendData("X");
+                    _sendData(COMMANDS.exitToNormal);
+                    //_sendData("X");
                     break;
 
                 default :
@@ -150,7 +208,7 @@ class RC1692HP {
 
         _enqueue(function() {
 
-            _sendData("M");
+            _sendData(COMMANDS.memory);
         }.bindenv(this));
         _enqueue(function() {
 
@@ -158,7 +216,7 @@ class RC1692HP {
             query.writen(address,'b');
             query.writen(value,'b');
             query.writen(0xff,'b');
-            _sendData(query, "CONFIG");
+            _sendData(query, COMMANDS.config);
         }.bindenv(this));
     }
 
@@ -193,7 +251,7 @@ class RC1692HP {
             if (message.len() > RC1692HP_MAX_MESSAGE_LENGTH) {
                 throw RC1692HP_ERROR_MESSAGE_LENGTH_TOO_LONG;
             }
-            _sendData(payload, "MESSAGE");
+            _sendData(payload, COMMANDS.message);
         }.bindenv(this));
     }
 
@@ -209,7 +267,7 @@ class RC1692HP {
 
         _enqueue(function() {
 
-            _sendData("9");
+            _sendData(COMMANDS.readId);
             _resultHandler = callback;
         }.bindenv(this));
     }
@@ -226,7 +284,7 @@ class RC1692HP {
 
         _enqueue(function(){
 
-            _sendData("S");
+            _sendData(COMMANDS.signalStrength);
             _resultHandler = callback;
         }.bindenv(this));
     }
@@ -243,7 +301,7 @@ class RC1692HP {
 
         _enqueue(function() {
 
-            _sendData("U");
+            _sendData(COMMANDS.tempMonitor);
             _resultHandler = callback;
         }.bindenv(this));
     }
@@ -260,7 +318,7 @@ class RC1692HP {
 
         _enqueue(function() {
 
-            _sendData("V");
+            _sendData(COMMANDS.batMonitor);
             _resultHandler = callback;
         }.bindenv(this));
     }
@@ -278,11 +336,11 @@ class RC1692HP {
 
         _enqueue(function() {
 
-            _sendData("Y");
+            _sendData(COMMANDS.memoryRead);
         }.bindenv(this));
         _enqueue(function() {
 
-            _sendData(address, "READCONFIG");
+            _sendData(address, COMMANDS.readConfig);
             _resultHandler = callback;
         }.bindenv(this));
     }
@@ -297,14 +355,18 @@ class RC1692HP {
     function _onInputHandler() {
 
         _inputBuffer.writeblob(_uart.readblob());
-        if ((_currentCommand in COMMANDS) && _inputBuffer.len() >= COMMANDS[_currentCommand]) {
-            _cancelTimer();
-            _log(_inputBuffer, "receiving data : ");
-            _processInput(_currentCommand);
-            _invokeResultHandler();
-            _cleanUp();
-            _nextInQueue();
+
+        if(_currentCommand != null) {
+            if (_inputBuffer.len() >= _currentCommand.length) {
+                _cancelTimer();
+                _log(_inputBuffer, "receiving data : ");
+                _processInput(_currentCommand.cmd);
+                _invokeResultHandler();
+                _cleanUp();
+                _nextInQueue();
+            }
         }
+
     }
 
 
@@ -426,18 +488,26 @@ class RC1692HP {
     function _sendData(data, comment = null) {
 
         _currentCommand = comment ? comment : data;
-        _uart.write(data);
+        if(_currentCommand == comment) {
+            _uart.write(data);
+        } else {
+            _uart.write(data.cmd);
+        }
+
         _log(data, "sending data : ");
         // check if it expects any response . if not, fire the next action in the queue;
-        if (COMMANDS[_currentCommand] == 0) {
+        //server.log(COMMANDS[_currentCommand]);
+        if (_currentCommand.length == 0) {
             _cleanUp();
             _nextInQueue();
-        } else {
+        }
+        else {
             _timeoutTimer = imp.wakeup(_timeout, function() {
                 _result.error <- RC1692HP_ERROR_TIMED_OUT;
                 _invokeResultHandler();
             }.bindenv(this));
         }
+
     }
 
 
@@ -492,8 +562,9 @@ class RC1692HP {
 
         if (_resultHandler) {
             _resultHandler(_result);
-        } else if ("error" in _result) {
-            throw _result.error;
+        }
+        else if ("error" in _result) {
+             throw _result.error;
         }
     }
 
